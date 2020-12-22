@@ -1,0 +1,45 @@
+name: Pytest on server
+
+on: [push]
+  # push:
+  #   branches: [ develop ]
+  # pull_request:
+  #   branches: [ develop ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.6']
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install requirements
+      run: |
+        sudo apt update
+        sudo apt install -y libjpeg-dev zlib1g-dev ffmpeg postgresql
+    - name: Install dependencies
+      run: |
+        cd server/
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f dev-requirements.txt ]; then pip install -r dev-requirements.txt; fi
+    - name: Copy config file
+      run: |
+        cp server/config.yaml.dist server/config.yaml
+        echo "database: postgres://szuru:dog@localhost:5432/szuru_test" >> server/config.yaml
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        cd server/
+        flake8
+    - name: Test with pytest
+      run: |
+        cd server/
+        TEST_ENVIRONMENT="true" pytest szurubooru/

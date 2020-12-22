@@ -8,3 +8,37 @@ multi_line_output = 3
 include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
+
+[tool.poetry]
+name = "szurubooru-server"
+version = "2.4.1"
+description = "Image board engine, Danbooru-style."
+authors = ["rr- (https://github.com/rr-)"]
+license = "GPLv3"
+
+[tool.poetry.dependencies]
+python = ">=3.6.1"
+alembic = ">=0.8.5"
+pyyaml = ">=3.11"
+psycopg2-binary = ">=2.6.1"
+SQLAlchemy = ">=1.0.12"
+coloredlogs = "==5.0"
+certifi = ">=2017.11.5"
+numpy = ">=1.8.2, <1.19.0"
+pillow = ">=4.3.0"
+pynacl = ">=1.2.1"
+pytz = ">=2018.3"
+pyRFC3339 = ">=1.0"
+youtube_dl = {version = "*"}
+
+[tool.poetry.dev-dependencies]
+pytest = ">=2.9.1"
+pytest-cov = ">=2.2.1"
+pytest-pgsql = ">=1.1.1"
+freezegun = ">=0.3.6"
+pycodestyle = ">=2.0.0"
+flake8 = ">=3.8.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
