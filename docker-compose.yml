@@ -15,8 +15,8 @@ services:
       ## or FQDNs/IP addresses if these services are running outside of Docker
       POSTGRES_HOST: sql
       ## Credentials for database:
-      POSTGRES_USER:
-      POSTGRES_PASSWORD:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       ## Commented Values are Default:
       #POSTGRES_DB: defaults to same as POSTGRES_USER
       #POSTGRES_PORT: 5432
@@ -41,7 +41,7 @@ services:
     image: postgres:11-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER:
-      POSTGRES_PASSWORD:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     volumes:
       - "${MOUNT_SQL}:/var/lib/postgresql/data"

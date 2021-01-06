@@ -1,0 +1,90 @@
+name: Docker
+
+on:
+  push:
+    # Publish `develop` as Docker `latest` image.
+    branches:
+      - develop
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+env:
+  # TODO: Change variable to your image's name.
+  CLIENT_IMAGE_NAME: client
+  SERVER_IMAGE_NAME: server
+
+jobs:
+  # Run tests.
+  # See also https://docs.docker.com/docker-hub/builds/automated-testing/
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run tests
+        run: |
+          if [ -f docker-compose.test.yml ]; then
+            # TODO: https://qiita.com/ko1nksm/items/91932b1d4f59a57d88ea
+            docker-compose --file docker-compose.test.yml build
+            docker-compose --file docker-compose.test.yml run sut
+          else
+            cd client
+            docker build . --file Dockerfile
+            cd ../server
+            docker build . --file Dockerfile
+          fi
+
+  # Push image to GitHub Packages.
+  # See also https://docs.docker.com/docker-hub/builds/
+  push:
+    # Ensure test job passes before pushing image.
+    needs: test
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build image of client
+        run: |
+          cd client
+          docker build . --file Dockerfile --tag $CLIENT_IMAGE_NAME
+          cd ..
+
+      - name: Build image of server
+        run: |
+          cd server
+          docker build . --file Dockerfile --tag $SERVER_IMAGE_NAME
+          cd ..
+
+      - name: Log into registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+      - name: Push images
+        run: |
+          CLIENT_IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$CLIENT_IMAGE_NAME
+          SERVER_IMAGE_ID=docker.pkg.github.com/${{ github.repository }}/$SERVER_IMAGE_NAME
+
+          # Change all uppercase to lowercase
+          CLIENT_IMAGE_ID=$(echo $CLIENT_IMAGE_ID | tr '[A-Z]' '[a-z]')
+          SERVER_IMAGE_ID=$(echo $SERVER_IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `latest` tag convention
+          [ "$VERSION" == "develop" ] && VERSION=latest
+
+          echo CLIENT_IMAGE_ID=$CLIENT_IMAGE_ID
+          echo SERVER_IMAGE_ID=$SERVER_IMAGE_ID
+          echo VERSION=$VERSION
+
+          docker tag $CLIENT_IMAGE_NAME $CLIENT_IMAGE_ID:$VERSION
+          docker push $CLIENT_IMAGE_ID:$VERSION
+          docker tag $SERVER_IMAGE_NAME $SERVER_IMAGE_ID:$VERSION
+          docker push $SERVER_IMAGE_ID:$VERSION
