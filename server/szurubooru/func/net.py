@@ -7,6 +7,7 @@ from threading import Thread
 from typing import Any, Dict, List
 
 from szurubooru import config, errors
+from szurubooru.func import mime
 
 logger = logging.getLogger(__name__)
 _dl_chunk_size = 2 ** 15
@@ -22,8 +23,12 @@ class DownloadTooLargeError(DownloadError):
 
 def download(url: str, use_video_downloader: bool = False) -> bytes:
     assert url
+    youtube_dl_error = None
     if use_video_downloader:
-        url = _get_youtube_dl_content_url(url)
+        try:
+            url = _get_youtube_dl_content_url(url) or url
+        except errors.ThirdPartyError as ex:
+            youtube_dl_error = ex
 
     request = urllib.request.Request(url)
     if config.config["user_agent"]:
@@ -32,23 +37,27 @@ def download(url: str, use_video_downloader: bool = False) -> bytes:
 
     content_buffer = b""
     length_tally = 0
-    with urllib.request.urlopen(request) as handle:
-        while True:
-            try:
-                chunk = handle.read(_dl_chunk_size)
-            except Exception:
-                raise DownloadError(url) from None
-            if not chunk:
-                break
-            length_tally += len(chunk)
-            if length_tally > config.config["max_dl_filesize"]:
-                raise DownloadTooLargeError(url)
-            content_buffer += chunk
+    try:
+        with urllib.request.urlopen(request) as handle:
+            while (chunk := handle.read(_dl_chunk_size)) :
+                length_tally += len(chunk)
+                if length_tally > config.config["max_dl_filesize"]:
+                    raise DownloadTooLargeError(url)
+                content_buffer += chunk
+    except urllib.error.HTTPError as ex:
+        raise DownloadError(url) from ex
+
+    if (
+        youtube_dl_error
+        and mime.get_mime_type(content_buffer) == "application/octet-stream"
+    ):
+        raise youtube_dl_error
+
     return content_buffer
 
 
 def _get_youtube_dl_content_url(url: str) -> str:
-    cmd = ["youtube-dl", "--format", "best"]
+    cmd = ["youtube-dl", "--format", "best", "--no-playlist"]
     if config.config["user_agent"]:
         cmd.extend(["--user-agent", config.config["user_agent"]])
     cmd.extend(["--get-url", url])
@@ -74,7 +83,7 @@ def post_to_webhooks(payload: Dict[str, Any]) -> List[Thread]:
     return threads
 
 
-def _post_to_webhook(webhook: str, payload: Dict[str, Any]) -> None:
+def _post_to_webhook(webhook: str, payload: Dict[str, Any]) -> int:
     req = urllib.request.Request(webhook)
     req.data = json.dumps(
         payload,
@@ -88,6 +97,6 @@ def _post_to_webhook(webhook: str, payload: Dict[str, Any]) -> None:
                 f"Webhook {webhook} returned {res.status} {res.reason}"
             )
         return res.status
-    except urllib.error.URLError as e:
-        logger.warning(f"Unable to call webhook {webhook}: {str(e)}")
+    except urllib.error.URLError as ex:
+        logger.warning(f"Unable to call webhook {webhook}: {ex}")
         return 400
