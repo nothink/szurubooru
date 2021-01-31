@@ -7,20 +7,12 @@ on:
     branches: [develop]
 
 env:
-  IMAGE_NAME: server
+  REPO_NAME: szurubooru
+  CLIENT_IMAGE_NAME: client
+  SERVER_IMAGE_NAME: server
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build the Docker image
-        run: |
-          cd server/
-          docker build . --file Dockerfile --tag env.$IMAGE_NAME
-
-  push:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,9 +28,18 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
-      - uses: docker/build-push-action@v2
+      - name: Build and Push the Client image
+        uses: docker/build-push-action@v2
         with:
           context: ./server
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.CLIENT_IMAGE_NAME }}:latest
+
+      - name: Build and Push the Server image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./client
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:latest
