@@ -2,7 +2,9 @@ name: Docker Image
 
 on:
   push:
-    branches: [develop]
+    branches: [develop, gfkari]
+    # tags:
+    #   - v*
   pull_request:
     branches: [develop]
 
@@ -42,4 +44,4 @@ jobs:
           context: ./client
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:latest
+            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:${{ ${GITHUB_REF##*/} }}
