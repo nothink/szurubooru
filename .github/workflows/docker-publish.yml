@@ -12,6 +12,7 @@ env:
   REPO_NAME: szurubooru
   CLIENT_IMAGE_NAME: client
   SERVER_IMAGE_NAME: server
+  TAG_NAME: ${{ github.ref }}
 
 jobs:
   build-and-push:
@@ -44,4 +45,4 @@ jobs:
           context: ./client
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:${{ $(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:${{ env.TAG_NAME }}
