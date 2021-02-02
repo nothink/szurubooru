@@ -3,10 +3,6 @@ name: Docker Image
 on:
   push:
     branches: [develop, gfkari]
-    # tags:
-    #   - v*
-  pull_request:
-    branches: [develop]
 
 env:
   REPO_NAME: szurubooru
@@ -30,18 +26,19 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
+      # https://stackoverflow.com/questions/58033366/
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
       - name: Build and Push the Client image
         uses: docker/build-push-action@v2
         with:
           context: ./server
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.CLIENT_IMAGE_NAME }}:latest
-
-      - name: Extract branch name
-        shell: bash
-        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: extract_branch
+            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.CLIENT_IMAGE_NAME }}:${{ steps.extract_branch.outputs.branch }}
 
       - name: Build and Push the Server image
         uses: docker/build-push-action@v2
