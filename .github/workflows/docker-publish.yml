@@ -12,7 +12,6 @@ env:
   REPO_NAME: szurubooru
   CLIENT_IMAGE_NAME: client
   SERVER_IMAGE_NAME: server
-  TAG_NAME: ${{ github.ref }}
 
 jobs:
   build-and-push:
@@ -39,10 +38,15 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.CLIENT_IMAGE_NAME }}:latest
 
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+
       - name: Build and Push the Server image
         uses: docker/build-push-action@v2
         with:
           context: ./client
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:${{ env.TAG_NAME }}
+            ghcr.io/${{ github.repository_owner }}/${{ env.REPO_NAME }}/${{ env.SERVER_IMAGE_NAME }}:${{ steps.extract_branch.outputs.branch }}
